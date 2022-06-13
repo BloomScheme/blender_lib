@@ -3,7 +3,7 @@
 ## install
 
 ```
-git submodule add git@github.com:BloomScheme/blender_lib.git ./blender_lib
+git submodule add https://github.com/BloomScheme/blender_lib.git ./blender_lib
 ```
 
 ## setup
