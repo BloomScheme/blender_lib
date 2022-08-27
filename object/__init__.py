@@ -1,5 +1,6 @@
 from enum import Enum
 import imp
+from optparse import Option
 from typing import List, Optional, Tuple
 from xmlrpc.client import Boolean
 from mathutils import Vector
@@ -46,8 +47,9 @@ def duplicate_objects(objects: Objects) -> Objects:
     bpy.ops.object.duplicate()
     return bpy.context.selected_objects
 
-def filter_objects_by_type(objects: Objects, type:str) -> Objects:
-    filtered_objects:Objects = []
+
+def filter_objects_by_type(objects: Objects, type: str) -> Objects:
+    filtered_objects: Objects = []
 
     for object in objects:
         if object.type == type:
@@ -56,25 +58,38 @@ def filter_objects_by_type(objects: Objects, type:str) -> Objects:
     return filtered_objects
 
 
+def get_object_by_name(objects: Objects, name: str) -> Optional[Object]:
+    for obj in objects:
+        if obj.name == name:
+            return obj
+
+    return None
+
+
 def get_3d_cursor_location() -> Vector:
     return bpy.context.scene.cursor.location
 
-def set_3d_cursor_location(location:Vector):
+
+def set_3d_cursor_location(location: Vector):
     bpy.context.scene.cursor.location = location
+
 
 def snap_3d_cursor_to_object():
     bpy.ops.view3d.snap_cursor_to_selected()
 
-def set_origin_to_3d_cursor():
-    bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
 
-def is_mesh_object(object:Object):
+def set_origin_to_3d_cursor():
+    bpy.ops.object.origin_set(type="ORIGIN_CURSOR", center="MEDIAN")
+
+
+def is_mesh_object(object: Object):
     if object is None or object.type != "MESH":
         return False
     return True
 
-def get_ancestors(object:Object):
-    ancestors:Objects = []
+
+def get_ancestors(object: Object):
+    ancestors: Objects = []
 
     def store_parent(object: Object):
         if object.parent == None:
