@@ -1,14 +1,14 @@
 from enum import Enum
 import imp
 from optparse import Option
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from xmlrpc.client import Boolean
 from mathutils import Vector
 import bpy
 
 from bpy.types import Object
 
-Objects = List[Object]
+Objects = Union[bpy.types.BlendDataObjects, List[Object]]
 
 
 def get_active_object() -> Optional[Object]:
@@ -16,7 +16,7 @@ def get_active_object() -> Optional[Object]:
 
 
 def set_active_object(object: Optional[Object]):
-    bpy.context.view_layer.objects.active = object
+    bpy.context.view_layer.objects.active = object  # type: ignore
     if object is not None:
         object.select_set(True)
 
@@ -41,11 +41,18 @@ def get_other_objects() -> Objects:
     return others
 
 
+def get_another_object() -> Optional[Object]:
+    others = get_other_objects()
+    if len(others) == 0:
+        return None
+    return others[0]
+
+
 def duplicate_objects(objects: Objects) -> Objects:
     deselect_all()
     select_objects(objects, True)
     bpy.ops.object.duplicate()
-    return bpy.context.selected_objects
+    return bpy.context.selected_objects  # type: ignore
 
 
 def filter_objects_by_type(objects: Objects, type: str) -> Objects:
@@ -67,7 +74,7 @@ def get_object_by_name(objects: Objects, name: str) -> Optional[Object]:
 
 
 def get_3d_cursor_location() -> Vector:
-    return bpy.context.scene.cursor.location
+    return bpy.context.scene.cursor.location  # type: ignore
 
 
 def set_3d_cursor_location(location: Vector):
@@ -99,3 +106,15 @@ def get_ancestors(object: Object):
 
     store_parent(object)
     return ancestors
+
+
+def make_it_child(
+    parent: Object,
+    child: Object,
+):
+    bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.ops.object.select_all(action="DESELECT")
+    child.select_set(True)
+    parent.select_set(True)
+    bpy.context.view_layer.objects.active = parent
+    bpy.ops.object.parent_set(type="OBJECT", keep_transform=True)
