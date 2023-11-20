@@ -118,3 +118,6 @@ def make_it_child(
     parent.select_set(True)
     bpy.context.view_layer.objects.active = parent
     bpy.ops.object.parent_set(type="OBJECT", keep_transform=True)
+
+def move_local_direction(object:bpy.types.Object, vector:Vector):
+    object.location += object.rotation_euler.to_matrix() @ vector # type: ignore
