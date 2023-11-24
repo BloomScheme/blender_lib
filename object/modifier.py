@@ -25,6 +25,13 @@ def set_bool(
     boolean.use_hole_tolerant = True
 
 
+def apply_modifier(name: str):
+    try:
+        bpy.ops.object.modifier_apply(modifier=name)
+    except Exception as e:
+        bpy.ops.object.modifier_remove(modifier=name)
+
+
 class ModSortCondition:
     def __init__(
         self,

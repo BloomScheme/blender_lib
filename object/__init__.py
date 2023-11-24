@@ -1,14 +1,14 @@
 from enum import Enum
 import imp
 from optparse import Option
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 from xmlrpc.client import Boolean
 from mathutils import Vector
 import bpy
 
 from bpy.types import Object
 
-Objects = Union[bpy.types.BlendDataObjects, List[Object]]
+Objects = Union[bpy.types.BlendDataObjects, List[Object], Sequence[Object]]
 
 
 def get_active_object() -> Optional[Object]:
@@ -108,6 +108,18 @@ def get_ancestors(object: Object):
     return ancestors
 
 
+def get_all_children(object: Object):
+    children: Objects = []
+
+    def store_children(object: Object):
+        for child in object.children:
+            children.append(child)
+            store_children(child)
+
+    store_children(object)
+    return children
+
+
 def make_it_child(
     parent: Object,
     child: Object,
@@ -119,5 +131,12 @@ def make_it_child(
     bpy.context.view_layer.objects.active = parent
     bpy.ops.object.parent_set(type="OBJECT", keep_transform=True)
 
-def move_local_direction(object:bpy.types.Object, vector:Vector):
-    object.location += object.rotation_euler.to_matrix() @ vector # type: ignore
+
+def move_local_direction(object: bpy.types.Object, vector: Vector):
+    object.location += object.rotation_euler.to_matrix() @ vector  # type: ignore
+
+
+def delete_object(object: Object):
+    deselect_all()
+    object.select_set(True)
+    bpy.ops.object.delete()
