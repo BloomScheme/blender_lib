@@ -19,3 +19,8 @@ def link_to_collection(collection: Collection, object: Object):
     if object.name in collection.objects:  # type: ignore
         return
     collection.objects.link(object)
+
+def unlink_from_all_collections(object: Object):
+    for collection in bpy.data.collections:  # type: ignore
+        if object.name in collection.objects:  # type: ignore
+            collection.objects.unlink(object)
