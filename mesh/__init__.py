@@ -1,10 +1,28 @@
 import bpy, bmesh, math
 from bpy.types import Object
 from typing import List, Union, Literal
-from mathutils import Vector, Matrix
+from mathutils import Quaternion, Vector, Matrix
 
 from ..collection import link_to_primary_collection
-from ..object import deselect_all, get_active_object, is_mesh_object, set_active_object
+from ..object import (
+    ObjectMode,
+    deselect_all,
+    get_active_object,
+    is_mesh_object,
+    set_active_object,
+)
+
+
+def min(a: float, b: float) -> float:
+    if a < b:
+        return a
+    return b
+
+
+def max(a: float, b: float) -> float:
+    if a > b:
+        return a
+    return b
 
 
 def generate_mesh_object(
@@ -67,21 +85,27 @@ def align_object_to_normal(object: Object, normal: Vector):
     object.rotation_euler.rotate_axis("Z", math.radians(90))
 
 
+def calculate_face_normal(points: List[Vector]) -> Vector:
+    return (points[1] - points[0]).cross(points[2] - points[0]).normalized()
+
+
 def get_global_face_normal(object: Object, face_index: int) -> Vector:
     mesh: bpy.types.Mesh = object.data  # type: ignore
     face = mesh.polygons[face_index]
-    return object.matrix_world @ face.normal  # type: ignore
+    global_points: List[Vector] = [object.matrix_world @ mesh.vertices[index].co for index in face.vertices]  # type: ignore
+    return calculate_face_normal(global_points)
+    # return object.matrix_world @ face.normal  # type: ignore
+
+
+def rotation_of_global_normal(global_normal: Vector) -> Quaternion:
+    return global_normal.to_track_quat("Z", "Y").to_matrix().to_4x4().to_quaternion()
 
 
 def align_rotation_to_face_normal(object: Object, face_index: int):
     mesh: bpy.types.Mesh = object.data  # type: ignore
 
-    # 選択した面の法線を取得する
-    selected_face = mesh.polygons[face_index]
-    normal: Vector = selected_face.normal  # type: ignore
-
     # 法線をグローバル座標系に変換する
-    global_normal = object.matrix_world @ normal  # type: ignore
+    global_normal = get_global_face_normal(object, face_index)
 
     # グローバル座標系における法線の逆変換行列を計算する
     rotation_matrix = global_normal.to_track_quat("Z", "Y").to_matrix().to_4x4()
@@ -95,9 +119,19 @@ def align_rotation_to_face_normal(object: Object, face_index: int):
 
 
 class BMeshHelper:
-    def __init__(self, mesh: bpy.types.Mesh) -> None:
+    def __init__(self, object: bpy.types.Object) -> None:
+        if object.type != "MESH":
+            raise ValueError("object is not mesh.")
+        self.object = object
+        mesh: bpy.types.Mesh = object.data  # type: ignore
         self.mesh = mesh
-        self.bmesh = bmesh.from_edit_mesh(mesh)
+        self.object_mode = ObjectMode(self.object)
+        self.object_mode.set_mode("EDIT")
+        self.bmesh = bmesh.from_edit_mesh(self.mesh)
+
+    def exit(self):
+        self.bmesh.free()
+        self.object_mode.restore_mode()
 
     def get_active_element(self, type: Literal["BMVert", "BMEdge", "BMFace"]):
         if self.bmesh.select_history:
@@ -126,3 +160,32 @@ class BMeshHelper:
     def get_edge_by_index(self, index: int) -> bmesh.types.BMEdge:
         self.bmesh.edges.ensure_lookup_table()
         return self.bmesh.edges[index]  # type: ignore
+
+    def get_face_of_edge(self, edge: bmesh.types.BMEdge) -> bmesh.types.BMFace:
+        return edge.link_faces[0]  # type: ignore
+
+    def scale_mesh(self, scale: Vector):
+        self.bmesh.transform(Matrix.Diagonal(scale).to_4x4())
+
+    def calc_dimensions(self) -> Vector:
+        min_point = Vector((math.inf, math.inf, math.inf))
+        max_point = Vector((-math.inf, -math.inf, math.inf))
+        for vertex in self.bmesh.verts:  # type: ignore
+            min_point.x = min(min_point.x, vertex.co.x)
+            min_point.y = min(min_point.y, vertex.co.y)
+            min_point.z = min(min_point.z, vertex.co.z)
+            max_point.x = max(max_point.x, vertex.co.x)
+            max_point.y = max(max_point.y, vertex.co.y)
+            max_point.z = max(max_point.z, vertex.co.z)
+        return max_point - min_point
+
+    def set_dimensions(self, dimensions: Vector):
+        current_dimensions = self.calc_dimensions()
+        scale = Vector(
+            (
+                dimensions.x / current_dimensions.x,
+                dimensions.y / current_dimensions.y,
+                dimensions.z / current_dimensions.z,
+            )
+        )
+        self.scale_mesh(scale)

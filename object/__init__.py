@@ -132,11 +132,39 @@ def make_it_child(
     bpy.ops.object.parent_set(type="OBJECT", keep_transform=True)
 
 
-def move_local_direction(object: bpy.types.Object, vector: Vector):
-    object.location += object.rotation_euler.to_matrix() @ vector  # type: ignore
+def move_local_direction(object: bpy.types.Object, vector: Vector, use_delta: Boolean = False):
+    if use_delta:
+        object.delta_location += object.rotation_euler.to_matrix() @ vector  # type: ignore
+    else:
+        object.location += object.rotation_euler.to_matrix() @ vector  # type: ignore
 
 
 def delete_object(object: Object):
     deselect_all()
     object.select_set(True)
     bpy.ops.object.delete()
+
+
+class ObjectMode:
+    def __init__(self, object: Object):
+        self.object = object
+        self.mode = object.mode
+        self.last_active: Optional[Object] = None
+        self.last_active_mode: Optional[str] = None
+
+    def set_mode(self, mode: str):
+        active = get_active_object()
+        if active is not None and active != self.object:
+            self.last_active = active
+            self.last_active_mode = active.mode  # type: ignore
+            bpy.ops.object.mode_set(mode="OBJECT")
+
+        set_active_object(self.object)
+        bpy.ops.object.mode_set(mode=mode)
+
+    def restore_mode(self):
+        bpy.ops.object.mode_set(mode=self.mode)
+        if self.last_active is not None:
+            set_active_object(self.last_active)
+            self.last_active = None
+            bpy.ops.object.mode_set(mode=self.last_active_mode)

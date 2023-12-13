@@ -2,6 +2,16 @@ from typing import List, Literal, Optional
 import bpy
 
 
+def get_modifier(object: bpy.types.Object, name: str):
+    if name in object.modifiers:  # type: ignore
+        return object.modifiers[name]
+    return None
+
+
+def get_modifiers_by_type(object: bpy.types.Object, type: str):
+    return [modifier for modifier in object.modifiers if modifier.type == type]
+
+
 def get_or_create_modifier(object: bpy.types.Object, name: str, type: str):
     if name in object.modifiers:  # type: ignore
         mod = object.modifiers[name]
