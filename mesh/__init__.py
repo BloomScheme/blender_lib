@@ -151,6 +151,19 @@ class BMeshHelper:
     def get_active_edge(self) -> bmesh.types.BMEdge:
         return self.get_active_element("BMEdge")  # type: ignore
 
+    def get_first_of_selected_edges(self) -> bmesh.types.BMEdge:
+        for edge in self.bmesh.edges:  # type: ignore
+            if edge.select:
+                return edge
+        raise ValueError("no selected edge")
+
+    def get_selected_edges_length(self) -> float:
+        length = 0.0
+        for edge in self.bmesh.edges:  # type: ignore
+            if edge.select:
+                length += self.calc_edge_length_world(edge)
+        return length
+
     def get_active_face(self) -> bmesh.types.BMFace:
         return self.get_active_element("BMFace")  # type: ignore
 
